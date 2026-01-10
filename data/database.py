@@ -11,8 +11,9 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         setor TEXT NOT NULL,
-        descricao TEXT NOT NULL,
-        gravidade INTEGER NOT NULL
+        gravidade INTEGER NOT NULL,
+        usuario TEXT NOT NULL,
+        descricao TEXT NOT NULL
     )
     '''
 
@@ -20,18 +21,17 @@ def init_db():
     
     con.commit()
     con.close()
-    print('Tabela criada com sucesso!')
 
-def salvar_dados(setor, descricao, gravidade):
+def salvar_dados(setor, descricao, gravidade, usuario):
     con = sqlite3.connect('data/incidentes.db')
     cursor = con.cursor()
 
     sql = '''
-    INSERT INTO incidentes (setor, descricao, gravidade)
-    VALUES(?, ?, ?)
+    INSERT INTO incidentes (setor, gravidade, usuario, descricao)
+    VALUES(?, ?, ?, ?)
     '''
 
-    dados = (setor, descricao, gravidade)
+    dados = (setor, gravidade, usuario, descricao)
     cursor.execute(sql, dados)
 
     con.commit()
