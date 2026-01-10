@@ -1,7 +1,8 @@
 import sqlite3
+import pandas as pd
 
-def conexao_db(nome_banco):
-    con = sqlite3.connect(nome_banco)
+def init_db():
+    con = sqlite3.connect('data/incidentes.db')
    
     cursor = con.cursor()
     
@@ -19,6 +20,7 @@ def conexao_db(nome_banco):
     
     con.commit()
     con.close()
+    print('Tabela criada com sucesso!')
 
 def salvar_dados(setor, descricao, gravidade):
     con = sqlite3.connect('data/incidentes.db')
@@ -46,26 +48,8 @@ def excluir_registro(id_registro):
     con.commit()
     con.close()
 
-
-def ver_conteudo():
-    # 1. Conecta
+def carregar_dados():
     con = sqlite3.connect('data/incidentes.db')
-    cursor = con.cursor()
-    
-    # 2. Executa a busca (O * significa "todas as colunas")
-    cursor.execute("SELECT * FROM incidentes")
-    
-    # 3. Recupera todos os resultados
-    linhas = cursor.fetchall()
-    
-    # 4. Exibe de forma organizada
-    print("\n--- CONTEÚDO DA TABELA INCIDENTES ---")
-    for linha in linhas:
-        print(linha)
-    
+    df = pd.read_sql_query("SELECT * FROM incidentes", con)
     con.close()
-
-conexao_db('data/incidentes.db')
-excluir_registro('3')
-
-ver_conteudo()
+    return df
