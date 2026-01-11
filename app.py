@@ -1,7 +1,5 @@
 import streamlit as st
 import plotly.express as px
-import pandas as pd
-# Importamos as classes em vez das funções soltas
 from data.database import GestaoIncidentes, GestaoInspecoes
 
 st.set_page_config(page_title="+Segur - Gestão de Riscos", layout="wide")
@@ -111,3 +109,18 @@ else:
                 st.warning(f"Registro ID {id_para_deletar} foi excluído!")
                 
                 st.rerun()
+
+    elif menu == "Checklists":
+        st.header("Checklists de Equipamentos")
+        
+        equip = st.selectbox("Equipamento", ["Pá Carregadeira", "Empilhadeira"])
+        
+        with st.form("form_check"):
+            res = st.radio("Resultado", ["Aprovado", "Interditado"])
+            obs = st.text_area("Observações")
+            if st.form_submit_button("Salvar Inspeção"):
+                inspecao_class.salvar_checklist(equip, st.session_state.user, res, obs)
+                st.success("Inspeção salva!")
+
+        st.subheader("Histórico de Inspeções")
+        st.dataframe(inspecao_class.carregar_inspecoes(), use_container_width=True) 
