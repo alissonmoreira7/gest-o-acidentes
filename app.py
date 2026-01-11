@@ -1,72 +1,65 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from data.database import init_db, salvar_dados, excluir_registro, carregar_dados
+# Importamos as classes em vez das funções soltas
+from data.database import GestaoIncidentes, GestaoInspecoes
 
 st.set_page_config(page_title="+Segur - Gestão de Riscos", layout="wide")
 
-init_db()
+incidente_class = GestaoIncidentes()
+inspecao_class = GestaoInspecoes()
 
 if 'logado' not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
-    vazio_esq, col_central, vazio_dir = st.columns([1, 1, 1])
+    _, col_central, _ = st.columns([1, 1, 1])
     with col_central:
         st.write("\n" * 5)
-        if not st.session_state.logado:
-            with st.form('user_login'):
-                st.title("+Segur Login")
-                st.caption('AQUI A SEGURANÇA SE FAZ PRESENTE')
-                st.divider()
-                user = st.text_input('Usuário')
-                senha = st.text_input('Senha', 
-                                    type='password')
-                login_btn = st.form_submit_button("Acessar Sistema",
-                                                type="primary",
-                                                use_container_width=True)
+        with st.form('user_login'):
+            st.title("🟢 +Segur Login")
+            user = st.text_input('Usuário')
+            senha = st.text_input('Senha', type='password')
+            if st.form_submit_button("Acessar Sistema", type="primary", use_container_width=True):
+                if user == "Analista TST" and senha == "12345":
+                    st.session_state.logado = True
+                    st.session_state.user = user
+                    st.rerun()
+                else:
+                    st.error("Usuário ou senha incorretos.")
 
-                if login_btn:
-                    if user == "Analista TST" and senha == "12345":
-                        st.session_state.logado = True
-                        st.session_state.perfil = "Analista TST"
-                        st.session_state.user = user
-                        st.success("Acesso autorizado! Bem-vindo, Analista.")
-                        st.rerun()
-                    else:
-                        st.error("Usuário ou senha incorretos.")
 else:
-    st.sidebar.title(f'Bem-vindo, {st.session_state.user}')
-    st.sidebar.write(f"Perfil: **{st.session_state.perfil}**")
+    st.sidebar.title(f"Olá, {st.session_state.user}")
+    menu = st.sidebar.radio("Navegação", ["Incidentes", "Checklists"])
+    
     if st.sidebar.button("Sair"):
         st.session_state.logado = False
         st.rerun()
 
-    if st.session_state.perfil == "Analista TST":
+    if menu == "Incidentes":
         st.header('Registro de Inspeção de Campo')
 
         with st.form('form_incidente', clear_on_submit=True):
             col1, col2 = st.columns(2)
-        
-            data_evento = st.date_input("Data do Ocorrido")
-            hora_evento = st.time_input("Hora do Ocorrido")
-
-            setor = col1.selectbox("Setor da Obra", 
-                                   ["Civil", "Elétrica", "Mecânica", "Administrativo", "Escavação"])
-            
-            gravidade = col2.select_slider("Gravidade do Risco", 
-                                             options=[1, 2, 3],
-                                             format_func=lambda x: "1 - Leve" if x == 1 else ("2 - Médio" if x == 2 else "3 - Grave"))
-                         
+            data_incidente = st.date_input("Data do Ocorrido")
+            hora_incidente = st.time_input("Hora do Ocorrido")
+            setor = col1.selectbox("Setor da Obra", ["Civil", "Elétrica", "Mecânica", "Administrativo", "Escavação"])
+            gravidade = col2.select_slider("Gravidade", options=[1, 2, 3], 
+                                           format_func=lambda x: "Leve" if x==1 else ("Médio" if x==2 else "Grave"))
             descricao = st.text_area("Descrição da Não Conformidade")
+
             if st.form_submit_button("Registrar Incidente"):
-                salvar_dados(data_evento, hora_evento, setor, gravidade, st.session_state.user, descricao)
-                st.success("Incidente registrado com sucesso no Banco de Dados!")
+                if not descricao:
+                    st.error("O campo descrição é obrigatório!")
+                else:
+                    incidente_class.salvar_incidente(data_incidente, hora_incidente, setor, gravidade, st.session_state.user, descricao)
+                    st.success("Incidente registrado com sucesso!")
+                    st.rerun()
 
         st.divider()
-
         st.header("Dashboard de Inteligência Preventiva")
-        df = carregar_dados()
+
+        df = incidente_class.carregar_incidentes()
 
         if not df.empty:
             criticos = df[df['gravidade'] >= 2].shape[0]
@@ -103,7 +96,7 @@ else:
             st.dataframe(df, use_container_width=True)
 
             st.divider()
-        
+
         else:
             st.info("Aguardando registros para gerar estatísticas.")
 
@@ -113,7 +106,7 @@ else:
             id_para_deletar = st.selectbox("Selecione o ID do registro que deseja remover:", lista_ids)
             
             if st.button("Confirmar Exclusão Permanente", type="secondary", use_container_width=True):
-                excluir_registro(id_para_deletar)
+                incidente_class.excluir_incidente(id_para_deletar)
                 
                 st.warning(f"Registro ID {id_para_deletar} foi excluído!")
                 
