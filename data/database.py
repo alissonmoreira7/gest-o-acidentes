@@ -1,65 +1,66 @@
 import sqlite3
 import pandas as pd
 
-def init_db():
-    con = sqlite3.connect('data/incidentes.db')
-   
-    cursor = con.cursor()
-    
-    sql = '''
-    CREATE TABLE IF NOT EXISTS incidentes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-        data_evento TEXT NOT NULL,                      
-        hora_evento TEXT NOT NULL,
-        setor TEXT NOT NULL,
-        gravidade INTEGER NOT NULL,
-        usuario TEXT NOT NULL,
-        descricao TEXT NOT NULL
-    )
-    '''
+class SegurDatabase:
+    def __init__(self, db_path='data/incidentes.db'):
+        self.db_path = db_path
+        self._init_tables()
 
-    cursor.execute(sql)
-    
-    con.commit()
-    con.close()
+    def _get_connection(self):
+        return sqlite3.connect(self.db_path)
 
-def salvar_dados(data_evento, hora_evento, setor, gravidade, usuario, descricao):
-    con = sqlite3.connect('data/incidentes.db')
-    cursor = con.cursor()
+    def _init_tables(self):
+        with self._get_connection() as con:
+            cursor = con.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS incidentes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+                    data_evento TEXT NOT NULL,                      
+                    hora_evento TEXT NOT NULL,
+                    setor TEXT NOT NULL,
+                    gravidade INTEGER NOT NULL,
+                    usuario TEXT NOT NULL,
+                    descricao TEXT NOT NULL
+                )
+            ''')
 
-    sql = '''
-    INSERT INTO incidentes (data_evento, hora_evento, setor, gravidade, usuario, descricao)
-    VALUES(?, ?, ?, ?, ?, ?)
-    '''
+            cursor.execute('''
+                CREATRE TABLE IF NOT EXISTS inpecoes(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    data_inspecao TEXT NOT NULL, 
+                    equipamento TEXT NOT NULL,
+                    inspetor TEXT NOT NULL,
+                    resultado TEXT NOT NULL,
+                    observacoes TEXT NOT NULL
+                )
+            ''')
+            con.commit()
+            #LEMBRAR DE TRATAR OS TIPOS DE COLUNAS!!!!
 
-    dados = (str(data_evento), str(hora_evento), setor, int(gravidade), usuario, descricao)
-    
-    cursor.execute(sql, dados)
-    con.commit()
-    con.close()
 
-def excluir_registro(id_registro):  
-    con = sqlite3.connect('data/incidentes.db')
-    cursor = con.cursor()
+class GestaoIncidentes(SegurDatabase):
+    def salvar_incidente(self, data_evento, hora_evento, setor, gravidade, usuario, descricao):
+        sql = '''
+            INSERT INTO incidentes (data_evento, hora_evento, setor, gravidade, usuario, descricao)
+            VALUES(?, ?, ?, ?, ?, ?)
+        '''
+        with self._get_connection() as con:
+            con.cursor().execute(sql, (str(data_evento), str(hora_evento), setor, int(gravidade), usuario, descricao))
+            con.commit()
 
-    sql = '''DELETE FROM incidentes WHERE id = ?'''
+    def carregar_incidentes(self):
+        with self._get_connection() as con:
+            df = pd.read_sql_query('SELECT * FROM incidentes', con)
+            con.close()
 
-    cursor.execute(sql, (id_registro,))
-
-    con.commit()
-    con.close()
-
-def carregar_dados():
-    con = sqlite3.connect('data/incidentes.db')
-    df = pd.read_sql_query("SELECT * FROM incidentes", con)
-    con.close()
-
-    if not df.empty:
         df['data_evento'] = pd.to_datetime(df['data_evento'])
-
         df['gravidade'] = pd.to_numeric(df['gravidade'], errors='coerce')
-
         df['hora_num'] = pd.to_datetime(df['hora_evento'], format='%H:%M:%S').dt.hour
+        return df
 
-    return df
+    def excluir_incidente(self, id_registro):
+        with self._get_connection() as con:
+            con.cursor().execute("DELETE FROM incidentes WHERE id = ?", (id_registro))
+            con.commit()
+
