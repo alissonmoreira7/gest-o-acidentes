@@ -1,8 +1,11 @@
 import streamlit as st
 import plotly.express as px
+from estilizacao import estilizacao
 from data.database import GestaoIncidentes, GestaoInspecoes
 
 st.set_page_config(page_title="+Segur - Gestão de Riscos", layout="wide")
+
+estilizacao()
 
 incidente_class = GestaoIncidentes()
 inspecao_class = GestaoInspecoes()
@@ -15,7 +18,7 @@ if not st.session_state.logado:
     with col_central:
         st.write("\n" * 5)
         with st.form('user_login'):
-            st.title("🟢 +Segur Login")
+            st.title("+Segur Login")
             user = st.text_input('Usuário')
             senha = st.text_input('Senha', type='password')
             if st.form_submit_button("Acessar Sistema", type="primary", use_container_width=True):
@@ -66,7 +69,15 @@ else:
             kpi1, kpi2, kpi3 = st.columns(3)
             kpi1.metric("Total de Registros", total)
             kpi2.metric("Riscos Críticos", criticos, delta_color="inverse")
-            kpi3.metric("Setor mais Crítico", df.groupby('setor')['gravidade'].mean().idxmax())
+            setor_mais_perigoso = df.groupby('setor')['gravidade'].sum().idxmax()
+            valor_total_risco = df.groupby('setor')['gravidade'].sum().max()
+
+            kpi3.metric(
+                label="Setor mais Crítico", 
+                value=setor_mais_perigoso, 
+                delta=f"{valor_total_risco} pts acumulados",
+                delta_color="inverse"
+            )
 
             col_chart1, col_chart2 = st.columns(2)
             

@@ -26,7 +26,7 @@ class SegurDatabase:
             ''')
 
             cursor.execute('''
-                CREATRE TABLE IF NOT EXISTS inpecoes(
+                CREATE TABLE IF NOT EXISTS inspecoes(
                     id INTEGER PRIMARY KEY AUTOINCREMENT, 
                     data_inspecao TEXT NOT NULL, 
                     equipamento TEXT NOT NULL,
@@ -36,7 +36,6 @@ class SegurDatabase:
                 )
             ''')
             con.commit()
-            #LEMBRAR DE TRATAR OS TIPOS DE COLUNAS!!!!
 
 
 class GestaoIncidentes(SegurDatabase):
@@ -52,16 +51,14 @@ class GestaoIncidentes(SegurDatabase):
     def carregar_incidentes(self):
         with self._get_connection() as con:
             df = pd.read_sql_query('SELECT * FROM incidentes', con)
-            con.close()
-
-        df['data_evento'] = pd.to_datetime(df['data_evento'])
-        df['gravidade'] = pd.to_numeric(df['gravidade'], errors='coerce')
-        df['hora_num'] = pd.to_datetime(df['hora_evento'], format='%H:%M:%S').dt.hour
+            if not df.empty:
+                df['data_evento'] = pd.to_datetime(df['data_evento'])
+                df['gravidade'] = pd.to_numeric(df['gravidade'], errors='coerce')
         return df
 
     def excluir_incidente(self, id_registro):
         with self._get_connection() as con:
-            con.cursor().execute("DELETE FROM incidentes WHERE id = ?", (id_registro))
+            con.cursor().execute("DELETE FROM incidentes WHERE id = ?", (id_registro,))
             con.commit()
 
 class GestaoInspecoes(SegurDatabase):
