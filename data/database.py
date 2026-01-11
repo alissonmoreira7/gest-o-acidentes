@@ -64,3 +64,17 @@ class GestaoIncidentes(SegurDatabase):
             con.cursor().execute("DELETE FROM incidentes WHERE id = ?", (id_registro))
             con.commit()
 
+class GestaoInspecoes(SegurDatabase):
+    def salvar_checklist(self, equipamento, usuario, resultado, obs):
+        sql = '''
+            INSERT INTO inspecoes (equipamento, usuario, resultado, observacoes)
+            VALUES(?, ?, ?, ?)
+            '''
+        
+        with self._get_connection() as con:
+            con.cursor().execute(sql, (equipamento, usuario, resultado, obs))
+            con.commit()
+
+    def carregar_inspecoes(self):
+        with self._get_connection() as con:
+            return pd.read_sql_query("SELECT * FROM inspecoes ORDER BY data_inspecao DESC", con)
